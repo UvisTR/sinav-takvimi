@@ -1,5 +1,5 @@
 const express = require('express');
-const fs = require('fs');
+const https = require('https'); // İnternetten veri çekmek için gerekli
 const csv = require('csv-parser');
 const path = require('path');
 
@@ -17,24 +17,33 @@ app.get('/', (req, res) => {
 
 // /api/data endpoint'i: CSV dosyasını okur ve JSON olarak gönderir.
 app.get('/api/data', (req, res) => {
-    const results = [];
-    const filePath = path.join(__dirname, 'sinavlar.csv');
+    // Öncelik Render'daki Environment Variable, yoksa varsayılan (test için)
+    const csvUrl = process.env.CSV_URL;
 
-    if (!fs.existsSync(filePath)) {
-        console.error('Hata: sinavlar.csv dosyası bulunamadı!');
-        return res.status(404).json({ error: 'Veri dosyası sunucuda bulunamadı.' });
+    if (!csvUrl) {
+        console.error('HATA: CSV_URL tanımlanmamış! Render Environment Variables ayarlarını kontrol edin.');
+        return res.status(500).json({ error: 'Veri kaynağı (CSV_URL) bulunamadı.' });
     }
+    
+    const results = [];
 
-    fs.createReadStream(filePath)
-        .pipe(csv())
-        .on('data', (data) => results.push(data))
-        .on('end', () => {
-            res.json(results);
-        })
-        .on('error', (error) => {
-            console.error('CSV okuma hatası:', error);
-            res.status(500).json({ error: 'CSV dosyası işlenirken bir hata oluştu.' });
-        });
+    https.get(csvUrl, (response) => {
+        response.pipe(csv({ 
+            separator: ',', // Google Sheets genelde virgül kullanır. Eğer noktalı virgül ise ';' yapın.
+            mapHeaders: ({ header }) => header.trim() 
+        }))
+            .on('data', (data) => results.push(data))
+            .on('end', () => {
+                res.json(results);
+            })
+            .on('error', (error) => {
+                console.error('CSV okuma hatası:', error);
+                res.status(500).json({ error: 'Veri çekilirken hata oluştu.' });
+            });
+    }).on('error', (e) => {
+        console.error('Bağlantı hatası:', e);
+        res.status(500).json({ error: 'Sunucu veri kaynağına bağlanamadı.' });
+    });
 });
 
 app.listen(port, () => {
