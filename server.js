@@ -7,13 +7,9 @@ const app = express();
 // Render, çalışacağı portu PORT çevre değişkeni ile verir.
 const port = process.env.PORT || 3000;
 
-// 'public' klasöründeki statik dosyaları (css, js) sun.
+// 'public' klasöründeki tüm statik dosyaları (index.html, css, js) sun.
+// Ana sayfa isteği geldiğinde 'public/index.html' otomatik olarak sunulur.
 app.use(express.static(path.join(__dirname, 'public')));
-
-// Ana sayfa isteğinde templates/index.html dosyasını gönder
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'templates', 'index.html'));
-});
 
 // /api/data endpoint'i: CSV dosyasını okur ve JSON olarak gönderir.
 app.get('/api/data', (req, res) => {
