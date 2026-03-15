@@ -173,6 +173,22 @@
             content: '\25B6'; /* Kapalıyken: SAĞ OK (Genişlet) */
         }
 
+        /* SINAV SAYACI */
+        #exam-counter {
+            position: fixed;
+            bottom: 20px;
+            right: 30px;
+            background: var(--panel);
+            backdrop-filter: blur(10px);
+            padding: 8px 15px;
+            border-radius: 10px;
+            font-size: 0.8rem;
+            color: #889;
+            border: 1px solid rgba(0, 123, 255, 0.2);
+            z-index: 20;
+            transition: var(--transition);
+        }
+
         /* MENÜ KAPALI DURUM (Global ve Desktop) */
         .sidebar.kapali > *:not(.menu-btn) { display: none; }
         .sidebar.kapali { width: 80px; padding: 25px 0; align-items: center; }
@@ -194,6 +210,7 @@
             
             .content { height: auto; padding: 20px; }
             #glow { display: none; } /* Mobilde performansı korumak için */
+            #exam-counter { display: none; } /* Mobilde sayacı gizle */
 
             /* MOBİL İÇİN İKON YÖNETİMİ */
             .menu-btn::before {
@@ -220,6 +237,13 @@
         <div class="filter-item">
             <label>Metin Arama</label>
             <input type="text" id="ara" placeholder="Ders veya şube yaz..." oninput="filtrele()">
+        </div>
+
+        <div class="filter-item">
+            <label>Tarih</label>
+            <select id="tarih" onchange="filtrele()">
+                <option value="">Tümü</option>
+            </select>
         </div>
 
         <div class="filter-item">
@@ -261,6 +285,8 @@
             </div>
     </main>
 
+    <div id="exam-counter"></div>
+
     <script>
         // Smooth Glow
         const glow = document.getElementById('glow');
@@ -287,6 +313,11 @@
 
         function goster(liste) {
             const container = document.getElementById('sonuclar');
+            const counter = document.getElementById('exam-counter');
+            if (counter) {
+                counter.textContent = `${liste.length} / ${database.length} sınav gösteriliyor`;
+            }
+
             if (liste.length === 0) {
                 container.innerHTML = '<div style="color: #888; grid-column: 1/-1; text-align: center; padding: 20px;">Kayıt bulunamadı.</div>';
                 return;
@@ -311,15 +342,22 @@
             const subeSelect = document.getElementById('sube');
             const bolumSelect = document.getElementById('bolum');
             const dersSelect = document.getElementById('ders');
+            const tarihSelect = document.getElementById('tarih');
 
             const uniqueSiniflar = new Set();
             const uniqueSubeler = new Set();
             const uniqueBolumler = new Set();
             const uniqueDersler = new Set();
+            const uniqueTarihler = new Set();
 
             data.forEach(item => {
                 const dersVerisi = String(item['DERS'] || '').trim();
                 if (dersVerisi) uniqueDersler.add(dersVerisi);
+
+                const tarihVerisi = String(item['TARİH'] || '').trim();
+                if (tarihVerisi) {
+                    uniqueTarihler.add(tarihVerisi.split(' ')[0]); // Sadece DD.MM.YYYY kısmını al
+                }
 
                 const sinifVerisi = String(item['SINIF'] || '');
                 if (!sinifVerisi) return;
@@ -356,6 +394,20 @@
             subeSelect.innerHTML = '<option value="">Tümü</option>';
             bolumSelect.innerHTML = '<option value="">Tümü</option>';
             dersSelect.innerHTML = '<option value="">Tümü</option>';
+            tarihSelect.innerHTML = '<option value="">Tümü</option>';
+
+            // Tarihleri doldur
+            Array.from(uniqueTarihler).sort((a, b) => {
+                // Tarihleri DD.MM.YYYY formatına göre sırala
+                const dateA = a.split('.').reverse().join('-');
+                const dateB = b.split('.').reverse().join('-');
+                return new Date(dateA) - new Date(dateB);
+            }).forEach(tarih => {
+                const option = document.createElement('option');
+                option.value = tarih;
+                option.textContent = tarih;
+                tarihSelect.appendChild(option);
+            });
 
             // Sınıfları doldur
             Array.from(uniqueSiniflar).sort((a, b) => a - b).forEach(sinif => {
@@ -398,6 +450,7 @@
 
         function filtrele() {
             const metin = document.getElementById('ara').value.toLocaleLowerCase('tr');
+            const tarih = document.getElementById('tarih').value;
             const sinif = document.getElementById('sinif').value;
             const sube = document.getElementById('sube').value;
             const bolum = document.getElementById('bolum').value;
@@ -406,6 +459,7 @@
             const sonuc = database.filter(x => {
                 const dersAdi = String(x['DERS'] || "").toLocaleLowerCase('tr');
                 const sinifVerisi = String(x['SINIF'] || "");
+                const tarihVerisi = String(x['TARİH'] || "");
                 
                 const parts = sinifVerisi.split('/');
                 const itemGrade = parts[0].trim();
@@ -423,12 +477,13 @@
                 }
 
                 const metinMatch = dersAdi.includes(metin) || sinifVerisi.toLocaleLowerCase('tr').includes(metin);
+                const tarihMatch = tarih === "" || tarihVerisi.startsWith(tarih);
                 const sinifMatch = sinif === "" || itemGrade === sinif;
                 const subeMatch = sube === "" || itemSube === sube;
                 const bolumMatch = bolum === "" || itemTags.includes(bolum);
                 const dersMatch = ders === "" || String(x['DERS'] || "") === ders;
 
-                return metinMatch && sinifMatch && subeMatch && bolumMatch && dersMatch;
+                return metinMatch && tarihMatch && sinifMatch && subeMatch && bolumMatch && dersMatch;
             });
             goster(sonuc);
         }
