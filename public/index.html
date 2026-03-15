@@ -166,11 +166,11 @@
 
         /* İKON YÖNETİMİ */
         .menu-btn::before {
-            content: '\25B6'; /* Varsayılan/Açıkken: SAĞ OK (User Request) */
+            content: '\25C0'; /* Varsayılan/Açıkken: SOL OK (Daralt) */
         }
 
         .sidebar.kapali .menu-btn::before {
-            content: '\25C0'; /* Kapalıyken: SOL OK (User Request) */
+            content: '\25B6'; /* Kapalıyken: SAĞ OK (Genişlet) */
         }
 
         /* MENÜ KAPALI DURUM (Global ve Desktop) */
@@ -194,6 +194,15 @@
             
             .content { height: auto; padding: 20px; }
             #glow { display: none; } /* Mobilde performansı korumak için */
+
+            /* MOBİL İÇİN İKON YÖNETİMİ */
+            .menu-btn::before {
+                content: '\25B2'; /* Mobil/Açıkken: YUKARI OK (Daralt) */
+            }
+
+            .sidebar.kapali .menu-btn::before {
+                content: '\25BC'; /* Mobil/Kapalıyken: AŞAĞI OK (Genişlet) */
+            }
         }
     </style>
 </head>
@@ -329,6 +338,11 @@
                     const branches = parts[1].trim().split(/\s+/);
                     branches.forEach(b => {
                         let val = b.replace(/[()]/g, '').trim().toLocaleUpperCase('tr');
+                        
+                        // Anomalileri düzelt (S1 -> ELK, Bİ -> BİL)
+                        if (val === 'S1') val = 'ELK';
+                        if (val === 'Bİ') val = 'BİL';
+
                         // Tek harfleri (A, B, S, L) ve sayıları ele, sadece bölüm kodlarını al
                         if (val.length > 1 && isNaN(val) && val !== 'S' && val !== 'L') {
                             uniqueBolumler.add(val);
@@ -400,7 +414,12 @@
                 let itemTags = [];
                 if (parts.length > 1) {
                      const rawTags = parts[1].trim().toLocaleUpperCase('tr').split(/\s+/);
-                     itemTags = rawTags.map(t => t.replace(/[()]/g, '').trim());
+                     itemTags = rawTags.map(t => {
+                         let val = t.replace(/[()]/g, '').trim();
+                         if (val === 'S1') return 'ELK';
+                         if (val === 'Bİ') return 'BİL';
+                         return val;
+                     });
                 }
 
                 const metinMatch = dersAdi.includes(metin) || sinifVerisi.toLocaleLowerCase('tr').includes(metin);
