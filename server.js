@@ -11,6 +11,11 @@ const port = process.env.PORT || 3000;
 // Ana sayfa isteği geldiğinde 'public/index.html' otomatik olarak sunulur.
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Ana sayfa için açık rota (Garanti olsun diye ekliyoruz)
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
 // /api/data endpoint'i: CSV dosyasını okur ve JSON olarak gönderir.
 app.get('/api/data', (req, res) => {
     // Link zaten Render'da tanımlı olduğu için doğrudan oradan alıyoruz.
