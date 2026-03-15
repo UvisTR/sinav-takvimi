@@ -205,8 +205,8 @@
         <button class="menu-btn" onclick="toggleMenu()"></button>
         <h2>Filtre</h2>
         <div class="credit">
-            Bu proje Umut Kafatutar'a aittir.<br>
-            Galata Mesleki ve Teknik Anadolu Lisesi okulu içindir
+            Bu proje Umut Kafatutar'a aittir.
+            <div style="margin-top: 10px;">Galata Mesleki ve Teknik Anadolu Lisesi okulu içindir</div>
         </div>
         <div class="filter-item">
             <label>Metin Arama</label>
@@ -366,10 +366,10 @@
                 'MAK': 'Makine Tasarımı ve Teknolojisi Alanı'
             };
 
-            Array.from(uniqueSubeler).sort().forEach(sube => {
+            Array.from(uniqueBolumler).sort().forEach(bolum => {
                 const option = document.createElement('option');
-                option.value = sube;
-                option.textContent = bolumIsimleri[sube] || sube;
+                option.value = bolum;
+                option.textContent = bolumIsimleri[bolum] || bolum;
                 bolumSelect.appendChild(option);
             });
 
