@@ -285,7 +285,11 @@
                 if (parts.length > 1) {
                     const branches = parts[1].trim().split(/\s+/);
                     branches.forEach(b => {
-                        if (b) uniqueSubeler.add(b.toLocaleUpperCase('tr'));
+                        let val = b.replace(/[()]/g, '').trim().toLocaleUpperCase('tr');
+                        // Tek harfleri (A, B, S, L) ve sayıları ele, sadece bölüm kodlarını al
+                        if (val.length > 1 && isNaN(val)) {
+                            uniqueSubeler.add(val);
+                        }
                     });
                 }
             });
@@ -304,10 +308,9 @@
 
             // Şubeleri/Grupları doldur
             const subeIsimleri = { 
-                'ELK': 'Elektrik', 
-                'MOB': 'Mobilya',
-                'BİL': 'Bilişim',
-                'MAK': 'Makine'
+                'ELK': 'Elektrik-Elektronik Teknolojileri Alanı', 
+                'BİL': 'Bilişim Teknolojileri Alanı',
+                'MAK': 'Makine Tasarımı ve Teknolojisi Alanı'
             };
 
             Array.from(uniqueSubeler).sort().forEach(sube => {
@@ -330,7 +333,12 @@
                 
                 const parts = sinifVerisi.split('/');
                 const itemGrade = parts[0].trim();
-                const itemTags = parts.length > 1 ? parts[1].trim().toLocaleUpperCase('tr').split(/\s+/) : [];
+                
+                let itemTags = [];
+                if (parts.length > 1) {
+                     const rawTags = parts[1].trim().toLocaleUpperCase('tr').split(/\s+/);
+                     itemTags = rawTags.map(t => t.replace(/[()]/g, '').trim());
+                }
                 
                 const metinMatch = dersAdi.includes(metin) || sinifVerisi.toLocaleLowerCase('tr').includes(metin);
                 const sinifMatch = sinif === "" || itemGrade === sinif;
