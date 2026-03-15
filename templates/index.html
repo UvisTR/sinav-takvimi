@@ -196,13 +196,23 @@
         </div>
 
         <div class="filter-item">
+            <label>Ders</label>
+            <select id="ders" onchange="filtrele()">
+                <option value="">Tümü</option>
+            </select>
+        </div>
+
+        <div class="filter-item">
+            <label>Öğretmen</label>
+            <select id="ogretmen" onchange="filtrele()">
+                <option value="">Tümü</option>
+            </select>
+        </div>
+
+        <div class="filter-item">
             <label>Sınıf</label>
             <select id="sinif" onchange="filtrele()">
                 <option value="">Tümü</option>
-                <option value="9">9. Sınıf</option>
-                <option value="10">10. Sınıf</option>
-                <option value="11">11. Sınıf</option>
-                <option value="12">12. Sınıf</option>
             </select>
         </div>
 
@@ -210,11 +220,6 @@
             <label>Şube/Grup</label>
             <select id="sube" onchange="filtrele()">
                 <option value="">Tümü</option>
-                <option value="A">A Şubesi</option>
-                <option value="B">B Şubesi</option>
-                <option value="C">C Şubesi</option>
-                <option value="ELK">Elektrik</option>
-                <option value="MOB">Mobilya</option>
             </select>
         </div>
 
@@ -241,12 +246,14 @@
         fetch('/api/data')
             .then(r => r.json())
             .then(data => {
-                database = data;
-                goster(data);
+                database = data || []; // Gelen data null/undefined ise boş dizi ata
+                populateFilters(database);
+                goster(database);
             })
             .catch(err => {
-                console.warn("API erişilemedi.");
+                console.warn("API erişilemedi, veriler yüklenemedi.", err);
                 database = [];
+                populateFilters(database); // Hata durumunda da filtreleri temizle
                 goster(database);
             });
 
@@ -259,31 +266,119 @@
             container.innerHTML = liste.map(s => `
                 <div class="card">
                     <div class="top">
-                        <div class="ders">${s['Ders Adı']}</div>
-                        <div class="saat">${s['Saat']}</div>
+                        <div class="ders">${s['DERS']}</div>
+                        <div class="saat">${s['SAAT']}</div>
                     </div>
                     <div class="alt">
-                        <div>Sınıf: ${s['Sınıf']}</div>
-                        <div>Tarih: ${s['Tarih']}</div>
+                        <div>Sınıf: ${s['SINIF']}</div>
+                        <div>Tarih: ${s['TARİH']}</div>
+                        <div style="font-size: 0.8em; color: #aaa; margin-top: 5px;">Öğrt: ${s['ÖĞRETMEN'] || '-'}</div>
                     </div>
                 </div>
             `).join('');
         }
 
+        function populateFilters(data) {
+            const sinifSelect = document.getElementById('sinif');
+            const subeSelect = document.getElementById('sube');
+            const dersSelect = document.getElementById('ders');
+            const ogretmenSelect = document.getElementById('ogretmen');
+
+            const uniqueSiniflar = new Set();
+            const uniqueSubeler = new Set();
+            const uniqueDersler = new Set();
+            const uniqueOgretmenler = new Set();
+
+            data.forEach(item => {
+                const sinifVerisi = String(item['SINIF'] || '');
+                const dersVerisi = String(item['DERS'] || '').trim();
+                const ogretmenVerisi = String(item['ÖĞRETMEN'] || '').trim();
+
+                if (dersVerisi) uniqueDersler.add(dersVerisi);
+                if (ogretmenVerisi) uniqueOgretmenler.add(ogretmenVerisi);
+                
+                if (!sinifVerisi) return;
+
+                const parts = sinifVerisi.split('/');
+                const grade = parts[0].trim();
+                if (grade) uniqueSiniflar.add(grade);
+ 
+                if (parts.length > 1) {
+                    const branches = parts[1].trim().split(/\s+/);
+                    branches.forEach(b => {
+                        if (b) uniqueSubeler.add(b.toLocaleUpperCase('tr'));
+                    });
+                }
+            });
+
+            // Mevcut seçenekleri temizle ("Tümü" hariç)
+            sinifSelect.innerHTML = '<option value="">Tümü</option>';
+            subeSelect.innerHTML = '<option value="">Tümü</option>';
+            dersSelect.innerHTML = '<option value="">Tümü</option>';
+            ogretmenSelect.innerHTML = '<option value="">Tümü</option>';
+
+            // Sınıfları doldur
+            Array.from(uniqueSiniflar).sort((a, b) => a - b).forEach(sinif => {
+                const option = document.createElement('option');
+                option.value = sinif;
+                option.textContent = `${sinif}. Sınıf`;
+                sinifSelect.appendChild(option);
+            });
+
+            // Şubeleri/Grupları doldur
+            const subeIsimleri = { 
+                'ELK': 'Elektrik', 
+                'MOB': 'Mobilya',
+                'BİL': 'Bilişim',
+                'MAK': 'Makine'
+            };
+
+            Array.from(uniqueSubeler).sort().forEach(sube => {
+                const option = document.createElement('option');
+                option.value = sube;
+                option.textContent = subeIsimleri[sube] || (sube.length === 1 && sube >= 'A' && sube <= 'Z' ? `${sube} Şubesi` : sube);
+                subeSelect.appendChild(option);
+            });
+
+            // Dersleri doldur
+            Array.from(uniqueDersler).sort().forEach(ders => {
+                const option = document.createElement('option');
+                option.value = ders;
+                option.textContent = ders;
+                dersSelect.appendChild(option);
+            });
+
+            // Öğretmenleri doldur
+            Array.from(uniqueOgretmenler).sort().forEach(ogretmen => {
+                const option = document.createElement('option');
+                option.value = ogretmen;
+                option.textContent = ogretmen;
+                ogretmenSelect.appendChild(option);
+            });
+        }
+
         function filtrele() {
             const metin = document.getElementById('ara').value.toLocaleLowerCase('tr');
             const sinif = document.getElementById('sinif').value;
-            const sube = document.getElementById('sube').value.toLocaleUpperCase('tr');
+            const sube = document.getElementById('sube').value;
+            const ders = document.getElementById('ders').value;
+            const ogretmen = document.getElementById('ogretmen').value;
 
             const sonuc = database.filter(x => {
-                const dersAdi = String(x['Ders Adı'] || "");
-                const sinifVerisi = String(x['Sınıf'] || "");
+                const dersAdi = String(x['DERS'] || "").toLocaleLowerCase('tr');
+                const sinifVerisi = String(x['SINIF'] || "");
+                const ogretmenAdi = String(x['ÖĞRETMEN'] || "");
                 
-                const dersMatch = dersAdi.toLocaleLowerCase('tr').includes(metin);
-                const sinifMatch = sinif === "" || sinifVerisi.includes(sinif);
-                const subeMatch = sube === "" || sinifVerisi.toLocaleUpperCase('tr').includes(sube);
+                const parts = sinifVerisi.split('/');
+                const itemGrade = parts[0].trim();
+                const itemTags = parts.length > 1 ? parts[1].trim().toLocaleUpperCase('tr').split(/\s+/) : [];
                 
-                return (dersMatch || sinifVerisi.toLocaleLowerCase('tr').includes(metin)) && sinifMatch && subeMatch;
+                const metinMatch = dersAdi.includes(metin) || sinifVerisi.toLocaleLowerCase('tr').includes(metin) || ogretmenAdi.toLocaleLowerCase('tr').includes(metin);
+                const sinifMatch = sinif === "" || itemGrade === sinif;
+                const subeMatch = sube === "" || itemTags.includes(sube);
+                const dersMatch = ders === "" || String(x['DERS'] || "") === ders;
+                const ogretmenMatch = ogretmen === "" || ogretmenAdi === ogretmen;
+                return metinMatch && sinifMatch && subeMatch && dersMatch && ogretmenMatch;
             });
             goster(sonuc);
         }
