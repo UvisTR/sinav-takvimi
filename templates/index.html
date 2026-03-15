@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Sınav Takvimi</title>
+    <style>
+        body { background-color: #000; color: #007bff; font-family: sans-serif; padding: 20px; }
+        .container { max-width: 600px; margin: auto; }
+        .search-box { background: #001122; padding: 15px; border-radius: 8px; border: 1px solid #004488; margin-bottom: 20px; display: flex; gap: 10px; }
+        input, select { background: #000; border: 1px solid #007bff; color: #007bff; padding: 10px; flex: 1; outline: none; }
+        .card { background: #00050a; border: 1px solid #002244; padding: 15px; margin-bottom: 10px; display: flex; justify-content: space-between; border-left: 4px solid #007bff; }
+        .ders { font-weight: bold; color: #00aaff; }
+        .detay { font-size: 0.8em; color: #0055aa; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2 style="text-align:center; text-shadow: 0 0 10px #007bff;">SINAV SORGULAMA</h2>
+        <div class="search-box">
+            <input type="text" id="ara" placeholder="Ders ara..." onkeyup="filtrele()">
+            <select id="sinif" onchange="filtrele()">
+                <option value="">Sınıf Seç</option>
+                <option value="9">9. Sınıf</option>
+                <option value="10">10. Sınıf</option>
+                <option value="11">11. Sınıf</option>
+            </select>
+        </div>
+        <div id="sonuclar"></div>
+    </div>
+    <script>
+        let veriler = [];
+        fetch('/api/data').then(r => r.json()).then(data => { veriler = data; goster(data); });
+        function goster(l) {
+            const d = document.getElementById('sonuclar');
+            d.innerHTML = l.map(s => `
+                <div class="card">
+                    <div><div class="ders">${s['Ders Adı']}</div><div class="detay">${s['Sınıf']}</div></div>
+                    <div style="text-align:right"><div class="ders">${s['Saat']}</div><div class="detay">${s['Tarih']}</div></div>
+                </div>
+            `).join('');
+        }
+        function filtrele() {
+            const m = document.getElementById('ara').value.toLowerCase();
+            const s = document.getElementById('sinif').value;
+            const sonuc = veriler.filter(x => x['Ders Adı'].toLowerCase().includes(m) && (s === "" || x['Sınıf'].includes(s)));
+            goster(sonuc);
+        }
+    </script>
+</body>
+</html>
