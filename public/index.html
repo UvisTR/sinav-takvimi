@@ -218,13 +218,6 @@
         </div>
 
         <div class="filter-item">
-            <label>Öğretmen</label>
-            <select id="ogretmen" onchange="filtrele()">
-                <option value="">Tümü</option>
-            </select>
-        </div>
-
-        <div class="filter-item">
             <label>Sınıf</label>
             <select id="sinif" onchange="filtrele()">
                 <option value="">Tümü</option>
@@ -232,7 +225,7 @@
         </div>
 
         <div class="filter-item">
-            <label>Şube/Grup</label>
+            <label>Bölüm</label>
             <select id="sube" onchange="filtrele()">
                 <option value="">Tümü</option>
             </select>
@@ -298,20 +291,16 @@
             const sinifSelect = document.getElementById('sinif');
             const subeSelect = document.getElementById('sube');
             const dersSelect = document.getElementById('ders');
-            const ogretmenSelect = document.getElementById('ogretmen');
 
             const uniqueSiniflar = new Set();
             const uniqueSubeler = new Set();
             const uniqueDersler = new Set();
-            const uniqueOgretmenler = new Set();
 
             data.forEach(item => {
                 const sinifVerisi = String(item['SINIF'] || '');
                 const dersVerisi = String(item['DERS'] || '').trim();
-                const ogretmenVerisi = String(item['ÖĞRETMEN'] || '').trim();
 
                 if (dersVerisi) uniqueDersler.add(dersVerisi);
-                if (ogretmenVerisi) uniqueOgretmenler.add(ogretmenVerisi);
                 
                 if (!sinifVerisi) return;
 
@@ -322,7 +311,13 @@
                 if (parts.length > 1) {
                     const branches = parts[1].trim().split(/\s+/);
                     branches.forEach(b => {
-                        if (b) uniqueSubeler.add(b.toLocaleUpperCase('tr'));
+                        // Parantezleri ve anlamsız karakterleri temizle
+                        let val = b.replace(/[()]/g, '').trim().toLocaleUpperCase('tr');
+                        
+                        // Filtreleme: Boş olmayan, Rakam olmayan (1,2 vb.) ve 'S', 'L' olmayan değerleri al
+                        if (val && isNaN(val) && val !== 'S' && val !== 'L') {
+                            uniqueSubeler.add(val);
+                        }
                     });
                 }
             });
@@ -331,7 +326,6 @@
             sinifSelect.innerHTML = '<option value="">Tümü</option>';
             subeSelect.innerHTML = '<option value="">Tümü</option>';
             dersSelect.innerHTML = '<option value="">Tümü</option>';
-            ogretmenSelect.innerHTML = '<option value="">Tümü</option>';
 
             // Sınıfları doldur
             Array.from(uniqueSiniflar).sort((a, b) => a - b).forEach(sinif => {
@@ -363,14 +357,6 @@
                 option.textContent = ders;
                 dersSelect.appendChild(option);
             });
-
-            // Öğretmenleri doldur
-            Array.from(uniqueOgretmenler).sort().forEach(ogretmen => {
-                const option = document.createElement('option');
-                option.value = ogretmen;
-                option.textContent = ogretmen;
-                ogretmenSelect.appendChild(option);
-            });
         }
 
         function filtrele() {
@@ -378,23 +364,26 @@
             const sinif = document.getElementById('sinif').value;
             const sube = document.getElementById('sube').value;
             const ders = document.getElementById('ders').value;
-            const ogretmen = document.getElementById('ogretmen').value;
 
             const sonuc = database.filter(x => {
                 const dersAdi = String(x['DERS'] || "").toLocaleLowerCase('tr');
                 const sinifVerisi = String(x['SINIF'] || "");
-                const ogretmenAdi = String(x['ÖĞRETMEN'] || "");
                 
                 const parts = sinifVerisi.split('/');
                 const itemGrade = parts[0].trim();
-                const itemTags = parts.length > 1 ? parts[1].trim().toLocaleUpperCase('tr').split(/\s+/) : [];
                 
-                const metinMatch = dersAdi.includes(metin) || sinifVerisi.toLocaleLowerCase('tr').includes(metin) || ogretmenAdi.toLocaleLowerCase('tr').includes(metin);
+                // Veriyi filtrelerken de aynı temizliği yap
+                let itemTags = [];
+                if (parts.length > 1) {
+                     const rawTags = parts[1].trim().toLocaleUpperCase('tr').split(/\s+/);
+                     itemTags = rawTags.map(t => t.replace(/[()]/g, '').trim());
+                }
+                
+                const metinMatch = dersAdi.includes(metin) || sinifVerisi.toLocaleLowerCase('tr').includes(metin);
                 const sinifMatch = sinif === "" || itemGrade === sinif;
                 const subeMatch = sube === "" || itemTags.includes(sube);
                 const dersMatch = ders === "" || String(x['DERS'] || "") === ders;
-                const ogretmenMatch = ogretmen === "" || ogretmenAdi === ogretmen;
-                return metinMatch && sinifMatch && subeMatch && dersMatch && ogretmenMatch;
+                return metinMatch && sinifMatch && subeMatch && dersMatch;
             });
             goster(sonuc);
         }
