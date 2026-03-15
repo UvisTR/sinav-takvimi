@@ -2,24 +2,128 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>Sınav Takvimi</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sınav Takvimi | Premium</title>
     <style>
-        body { background-color: #000; color: #007bff; font-family: sans-serif; padding: 20px; }
-        .container { max-width: 600px; margin: auto; }
-        .search-box { background: #001122; padding: 15px; border-radius: 8px; border: 1px solid #004488; margin-bottom: 20px; display: flex; gap: 10px; }
-        input, select { background: #000; border: 1px solid #007bff; color: #007bff; padding: 10px; flex: 1; outline: none; }
-        .card { background: #00050a; border: 1px solid #002244; padding: 15px; margin-bottom: 10px; display: flex; justify-content: space-between; border-left: 4px solid #007bff; }
-        .ders { font-weight: bold; color: #00aaff; }
-        .detay { font-size: 0.8em; color: #0055aa; }
+        /* Ana Gövde ve Arka Plan */
+        body { 
+            background-color: #000; 
+            color: #007bff; 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            margin: 0; 
+            padding: 20px;
+            overflow-x: hidden; /* Işık efektinin taşıp kaydırma çubuğu yapmasını engeller */
+        }
+
+        /* Fareyi Takip Eden Işık Efekti */
+        #glow {
+            position: fixed;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(0, 123, 255, 0.15) 0%, rgba(0,0,0,0) 70%);
+            border-radius: 50%;
+            pointer-events: none; /* Fare tıklamalarını engellemez */
+            transform: translate(-50%, -50%);
+            z-index: 0;
+            transition: 0.1s ease-out;
+        }
+
+        /* Tüm İçeriği Saran Konteyner (Cam Efekti) */
+        .container { 
+            max-width: 700px; 
+            margin: auto; 
+            position: relative;
+            z-index: 1;
+        }
+
+        h2 { 
+            text-align: center; 
+            text-shadow: 0 0 15px rgba(0, 123, 255, 0.8); 
+            letter-spacing: 2px;
+            margin-bottom: 30px;
+        }
+
+        /* Arama Kutusu (Şeffaf ve Yuvarlak) */
+        .search-box { 
+            background: rgba(0, 17, 34, 0.4); 
+            backdrop-filter: blur(10px); /* Arka planı bulanıklaştırır */
+            padding: 20px; 
+            border-radius: 16px; /* Yumuşak köşeler */
+            border: 1px solid rgba(0, 123, 255, 0.3); 
+            margin-bottom: 25px; 
+            display: flex; 
+            gap: 15px; 
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        input, select { 
+            background: rgba(0, 0, 0, 0.6); 
+            border: 1px solid rgba(0, 123, 255, 0.5); 
+            color: #4da3ff; 
+            padding: 12px; 
+            flex: 1; 
+            outline: none;
+            border-radius: 10px; /* Yumuşak köşeler */
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        input:focus, select:focus {
+            border-color: #007bff;
+            box-shadow: 0 0 10px rgba(0, 123, 255, 0.4);
+        }
+
+        /* Kartlar (Şeffaf ve Yuvarlak) */
+        .card { 
+            background: rgba(0, 5, 10, 0.6); 
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(0, 50, 100, 0.5); 
+            padding: 18px; 
+            margin-bottom: 15px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center;
+            border-radius: 14px; /* Yumuşak köşeler */
+            border-left: 5px solid #007bff; 
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            background: rgba(0, 15, 30, 0.8);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 123, 255, 0.15);
+        }
+
+        .ders { font-weight: bold; color: #4da3ff; font-size: 1.1em; margin-bottom: 5px; }
+        .detay { font-size: 0.85em; color: #0055aa; }
+        .saat { font-weight: bold; color: #007bff; font-size: 1.2em; text-shadow: 0 0 5px rgba(0, 123, 255, 0.5); }
+
+        /* MOBİL UYUM (Otomatik Algılama) */
+        @media (max-width: 600px) {
+            .search-box {
+                flex-direction: column; /* Telefondaysa yan yana değil alt alta diz */
+                gap: 10px;
+                padding: 15px;
+            }
+            .card {
+                padding: 15px;
+            }
+            .ders { font-size: 1em; }
+            .saat { font-size: 1.1em; }
+            body { padding: 10px; }
+        }
     </style>
 </head>
 <body>
+
+    <div id="glow"></div>
+
     <div class="container">
-        <h2 style="text-align:center; text-shadow: 0 0 10px #007bff;">SINAV SORGULAMA</h2>
+        <h2>SINAV SORGULAMA</h2>
         <div class="search-box">
-            <input type="text" id="ara" placeholder="Ders ara..." onkeyup="filtrele()">
+            <input type="text" id="ara" placeholder="Ders adı ara..." onkeyup="filtrele()">
             <select id="sinif" onchange="filtrele()">
-                <option value="">Sınıf Seç</option>
+                <option value="">Tüm Sınıflar</option>
                 <option value="9">9. Sınıf</option>
                 <option value="10">10. Sınıf</option>
                 <option value="11">11. Sınıf</option>
@@ -27,18 +131,35 @@
         </div>
         <div id="sonuclar"></div>
     </div>
+
     <script>
+        // Fareyi Takip Eden Işık Sistemi
+        const glow = document.getElementById('glow');
+        document.addEventListener('mousemove', (e) => {
+            glow.style.left = e.clientX + 'px';
+            glow.style.top = e.clientY + 'px';
+        });
+
+        // Veri Çekme ve Filtreleme Sistemi
         let veriler = [];
         fetch('/api/data').then(r => r.json()).then(data => { veriler = data; goster(data); });
+
         function goster(l) {
             const d = document.getElementById('sonuclar');
             d.innerHTML = l.map(s => `
                 <div class="card">
-                    <div><div class="ders">${s['Ders Adı']}</div><div class="detay">${s['Sınıf']}</div></div>
-                    <div style="text-align:right"><div class="ders">${s['Saat']}</div><div class="detay">${s['Tarih']}</div></div>
+                    <div>
+                        <div class="ders">${s['Ders Adı']}</div>
+                        <div class="detay">${s['Sınıf']}</div>
+                    </div>
+                    <div style="text-align:right">
+                        <div class="saat">${s['Saat']}</div>
+                        <div class="detay">${s['Tarih']}</div>
+                    </div>
                 </div>
             `).join('');
         }
+
         function filtrele() {
             const m = document.getElementById('ara').value.toLowerCase();
             const s = document.getElementById('sinif').value;
