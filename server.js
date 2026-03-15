@@ -1,5 +1,5 @@
 const express = require('express');
-const https = require('https');
+const fs = require('fs');
 const csv = require('csv-parser');
 const path = require('path');
 
@@ -18,20 +18,17 @@ app.get('/', (req, res) => {
 
 // /api/data endpoint'i: CSV dosyasını okur ve JSON olarak gönderir.
 app.get('/api/data', (req, res) => {
-    // Link zaten Render'da tanımlı olduğu için doğrudan oradan alıyoruz.
-    const csvUrl = process.env.CSV_URL;
+    const filePath = path.join(__dirname, 'sinavlar.csv');
 
-    console.log('Veri isteği alındı. CSV_URL:', csvUrl ? 'Tanımlı (Mevcut)' : 'TANIMSIZ (Eksik)');
-
-    if (!csvUrl) {
-        console.error('HATA: CSV_URL tanımlanmamış! Render panelinden Environment Variables kısmını kontrol edin.');
-        return res.status(500).json({ error: 'Veri kaynağı (CSV_URL) bulunamadı.' });
+    if (!fs.existsSync(filePath)) {
+        console.error('HATA: sinavlar.csv dosyası sunucuda bulunamadı!');
+        return res.status(404).json({ error: 'Veri dosyası (sinavlar.csv) bulunamadı.' });
     }
 
     const results = [];
 
-    https.get(csvUrl, (stream) => {
-        stream.pipe(csv({
+    fs.createReadStream(filePath)
+        .pipe(csv({
             // Google Sheets genelde virgül (,) kullanır.
             // Eğer Excel'den farklı kaydettiyseniz ve noktalı virgül (;) kullanıyorsa bunu değiştirin.
             separator: ',',
@@ -58,10 +55,6 @@ app.get('/api/data', (req, res) => {
                 console.error('CSV okuma hatası:', error);
                 res.status(500).json({ error: 'Veri çekilirken hata oluştu.' });
             });
-    }).on('error', (e) => {
-        console.error('Bağlantı hatası:', e);
-        res.status(500).json({ error: 'Sunucu veri kaynağına bağlanamadı.' });
-    });
 });
 
 app.listen(port, () => {
