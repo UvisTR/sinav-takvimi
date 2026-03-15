@@ -204,17 +204,13 @@
     <aside class="sidebar">
         <button class="menu-btn" onclick="toggleMenu()"></button>
         <h2>Filtre</h2>
-        <div class="credit">Bu proje Umut Kafatutar'a aittir.</div>
+        <div class="credit">
+            Bu proje Umut Kafatutar'a aittir.<br>
+            Galata Mesleki ve Teknik Anadolu Lisesi okulu içindir
+        </div>
         <div class="filter-item">
             <label>Metin Arama</label>
             <input type="text" id="ara" placeholder="Ders veya şube yaz..." oninput="filtrele()">
-        </div>
-
-        <div class="filter-item">
-            <label>Ders</label>
-            <select id="ders" onchange="filtrele()">
-                <option value="">Tümü</option>
-            </select>
         </div>
 
         <div class="filter-item">
@@ -234,6 +230,13 @@
         <div class="filter-item">
             <label>Bölüm</label>
             <select id="bolum" onchange="filtrele()">
+                <option value="">Tümü</option>
+            </select>
+        </div>
+
+        <div class="filter-item">
+            <label>Ders</label>
+            <select id="ders" onchange="filtrele()">
                 <option value="">Tümü</option>
             </select>
         </div>
@@ -297,33 +300,38 @@
         function populateFilters(data) {
             const sinifSelect = document.getElementById('sinif');
             const subeSelect = document.getElementById('sube');
+            const bolumSelect = document.getElementById('bolum');
             const dersSelect = document.getElementById('ders');
 
             const uniqueSiniflar = new Set();
             const uniqueSubeler = new Set();
+            const uniqueBolumler = new Set();
             const uniqueDersler = new Set();
 
             data.forEach(item => {
-                const sinifVerisi = String(item['SINIF'] || '');
                 const dersVerisi = String(item['DERS'] || '').trim();
-
                 if (dersVerisi) uniqueDersler.add(dersVerisi);
-                
+
+                const sinifVerisi = String(item['SINIF'] || '');
                 if (!sinifVerisi) return;
 
                 const parts = sinifVerisi.split('/');
                 const grade = parts[0].trim();
                 if (grade) uniqueSiniflar.add(grade);
  
+                // Şube/Grup için (9/A, 9/B vb.) - Boşluktan önceki kısmı al
+                const subeKodu = sinifVerisi.split(' ')[0].trim();
+                if (subeKodu.includes('/')) {
+                    uniqueSubeler.add(subeKodu);
+                }
+
                 if (parts.length > 1) {
                     const branches = parts[1].trim().split(/\s+/);
                     branches.forEach(b => {
-                        // Parantezleri ve anlamsız karakterleri temizle
                         let val = b.replace(/[()]/g, '').trim().toLocaleUpperCase('tr');
-                        
-                        // Filtreleme: Boş olmayan, Rakam olmayan (1,2 vb.) ve 'S', 'L' olmayan değerleri al
-                        if (val && isNaN(val) && val !== 'S' && val !== 'L') {
-                            uniqueSubeler.add(val);
+                        // Tek harfleri (A, B, S, L) ve sayıları ele, sadece bölüm kodlarını al
+                        if (val.length > 1 && isNaN(val) && val !== 'S' && val !== 'L') {
+                            uniqueBolumler.add(val);
                         }
                     });
                 }
@@ -343,19 +351,26 @@
                 sinifSelect.appendChild(option);
             });
 
-            // Şubeleri/Grupları doldur
-            const subeIsimleri = { 
-                'ELK': 'Elektrik', 
-                'MOB': 'Mobilya',
-                'BİL': 'Bilişim',
-                'MAK': 'Makine'
+            // Şube/Grup doldur (9/A, 9/B...)
+            Array.from(uniqueSubeler).sort().forEach(sube => {
+                const option = document.createElement('option');
+                option.value = sube;
+                option.textContent = sube;
+                subeSelect.appendChild(option);
+            });
+
+            // Bölümleri doldur
+            const bolumIsimleri = { 
+                'ELK': 'Elektrik-Elektronik Teknolojileri Alanı', 
+                'BİL': 'Bilişim Teknolojileri Alanı',
+                'MAK': 'Makine Tasarımı ve Teknolojisi Alanı'
             };
 
             Array.from(uniqueSubeler).sort().forEach(sube => {
                 const option = document.createElement('option');
                 option.value = sube;
-                option.textContent = subeIsimleri[sube] || (sube.length === 1 && sube >= 'A' && sube <= 'Z' ? `${sube} Şubesi` : sube);
-                subeSelect.appendChild(option);
+                option.textContent = bolumIsimleri[sube] || sube;
+                bolumSelect.appendChild(option);
             });
 
             // Dersleri doldur
@@ -371,6 +386,7 @@
             const metin = document.getElementById('ara').value.toLocaleLowerCase('tr');
             const sinif = document.getElementById('sinif').value;
             const sube = document.getElementById('sube').value;
+            const bolum = document.getElementById('bolum').value;
             const ders = document.getElementById('ders').value;
 
             const sonuc = database.filter(x => {
@@ -379,20 +395,21 @@
                 
                 const parts = sinifVerisi.split('/');
                 const itemGrade = parts[0].trim();
+                const itemSube = sinifVerisi.split(' ')[0].trim(); // 9/A, 9/B
                 
-                // Veriyi filtrelerken de aynı temizliği yap
                 let itemTags = [];
                 if (parts.length > 1) {
                      const rawTags = parts[1].trim().toLocaleUpperCase('tr').split(/\s+/);
                      itemTags = rawTags.map(t => t.replace(/[()]/g, '').trim());
                 }
-                
+
                 const metinMatch = dersAdi.includes(metin) || sinifVerisi.toLocaleLowerCase('tr').includes(metin);
                 const sinifMatch = sinif === "" || itemGrade === sinif;
                 const subeMatch = sube === "" || itemSube === sube;
                 const bolumMatch = bolum === "" || itemTags.includes(bolum);
                 const dersMatch = ders === "" || String(x['DERS'] || "") === ders;
-                return metinMatch && sinifMatch && subeMatch && dersMatch && bolumMatch;
+
+                return metinMatch && sinifMatch && subeMatch && bolumMatch && dersMatch;
             });
             goster(sonuc);
         }
