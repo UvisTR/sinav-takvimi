@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sınav Sistemi | Pro Dashboard</title>
+    <style>
+        :root {
+            --glow: #007bff;
+            --dark: #000000;
+            --panel: rgba(0, 10, 20, 0.7);
+            --transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        body { 
+            background-color: var(--dark); 
+            color: #fff; 
+            font-family: 'Segoe UI', system-ui, sans-serif; 
+            margin: 0; 
+            display: flex; 
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Dinamik Glow Arka Plan */
+        #glow {
+            position: fixed;
+            width: 250px; height: 250px;
+            background: radial-gradient(circle, rgba(0, 123, 255, 0.5) 0%, transparent 70%);
+            border-radius: 50%;
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+            z-index: 0;
+            transition: 0.1s linear;
+        }
+
+        /* KOMPAKT SOL PANEL */
+        .sidebar {
+            width: 260px;
+            background: var(--panel);
+            backdrop-filter: blur(25px);
+            border-right: 1px solid rgba(0, 123, 255, 0.15);
+            padding: 30px 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            z-index: 10;
+            transition: var(--transition);
+            position: relative;
+        }
+
+        .sidebar h2 {
+            font-size: 1rem;
+            color: var(--glow);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin: 0 0 20px 10px;
+            text-shadow: 0 0 10px var(--glow);
+        }
+
+        .sidebar .credit {
+            font-size: 0.8rem;
+            color: #778;
+            margin: -15px 0 20px 10px;
+            font-style: italic;
+        }
+
+        .filter-item { display: flex; flex-direction: column; gap: 5px; }
+        .filter-item label { font-size: 0.75rem; color: #0055aa; margin-left: 5px; font-weight: bold; }
+
+        input, select { 
+            background: rgba(0, 0, 0, 0.5); 
+            border: 1px solid rgba(0, 123, 255, 0.2); 
+            color: #4da3ff; 
+            padding: 10px; 
+            border-radius: 10px;
+            outline: none;
+            font-size: 0.9rem;
+            transition: var(--transition);
+        }
+
+        input:focus, select:focus {
+            border-color: var(--glow);
+            box-shadow: 0 0 15px rgba(0, 123, 255, 0.2);
+            background: rgba(0, 0, 0, 0.8);
+        }
+
+        /* ANA İÇERİK */
+        .content {
+            flex: 1;
+            padding: 30px;
+            overflow-y: auto;
+            position: relative;
+            z-index: 1;
+            scroll-behavior: smooth;
+        }
+
+        /* KART TASARIMI */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 15px;
+        }
+
+        .card { 
+            background: rgba(0, 5, 10, 0.4); 
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(0, 50, 100, 0.2); 
+            padding: 20px; 
+            border-radius: 15px;
+            border-top: 3px solid transparent;
+            transition: var(--transition);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .card:hover {
+            border-top-color: var(--glow);
+            background: rgba(0, 20, 40, 0.6);
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+        }
+
+        .card .top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+        .card .ders { font-weight: bold; color: #fff; font-size: 1.05rem; }
+        .card .saat { color: var(--glow); font-weight: bold; font-size: 1.1rem; }
+        .card .alt { font-size: 0.8rem; color: #007bff; opacity: 0.7; }
+
+        /* Yükleniyor Animasyonu */
+        .loader {
+            border: 5px solid #222;
+            border-top: 5px solid var(--glow);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 100px auto;
+            grid-column: 1 / -1; /* Grid'de ortalamak için */
+        }
+        @keyframes spin {
+            100% { transform: rotate(360deg); }
+        }
+
+        /* HAMBURGER BUTON (Sadece mobilde görünür) */
+        .menu-btn {
+            position: absolute;
+            top: 25px;
+            right: 20px;
+            z-index: 100;
+            background: rgba(0, 10, 20, 0.6);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(0, 123, 255, 0.3);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.2rem;
+            line-height: 1;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px; height: 40px; /* Kare boyut sabitleme */
+        }
+
+        /* İKON YÖNETİMİ */
+        .menu-btn::before {
+            content: '\25C0'; /* Varsayılan/Açıkken: SOL OK (Daralt) */
+        }
+
+        .sidebar.kapali .menu-btn::before {
+            content: '\25B6'; /* Kapalıyken: SAĞ OK (Genişlet) */
+        }
+
+        /* SINAV SAYACI */
+        #exam-counter {
+            position: fixed;
+            bottom: 20px;
+            right: 30px;
+            background: var(--panel);
+            backdrop-filter: blur(10px);
+            padding: 8px 15px;
+            border-radius: 10px;
+            font-size: 0.8rem;
+            color: #889;
+            border: 1px solid rgba(0, 123, 255, 0.2);
+            z-index: 20;
+            transition: var(--transition);
+        }
+
+        /* MENÜ KAPALI DURUM (Global ve Desktop) */
+        .sidebar.kapali > *:not(.menu-btn) { display: none; }
+        .sidebar.kapali { width: 80px; padding: 25px 0; align-items: center; }
+        .sidebar.kapali .menu-btn { position: static; margin-bottom: 10px; }
+
+        /* MOBİL AYARLAR */
+        @media (max-width: 768px) {
+            body { flex-direction: column; overflow-y: auto; }
+            
+            .sidebar { 
+                width: 100%; height: auto;
+                border-right: none; border-bottom: 1px solid rgba(0, 123, 255, 0.15);
+                left: 0;
+                box-sizing: border-box;
+            }
+            
+            .sidebar.kapali { width: 100%; height: 70px; flex-direction: row; justify-content: flex-end; padding: 0 20px; }
+            .sidebar.kapali .menu-btn { position: relative; top: auto; right: auto; margin: 0; }
+            
+            .content { height: auto; padding: 20px; }
+            #glow { display: none; } /* Mobilde performansı korumak için */
+            #exam-counter { display: none; } /* Mobilde sayacı gizle */
+
+            /* MOBİL İÇİN İKON YÖNETİMİ */
+            .menu-btn::before {
+                content: '\25B2'; /* Mobil/Açıkken: YUKARI OK (Daralt) */
+            }
+
+            .sidebar.kapali .menu-btn::before {
+                content: '\25BC'; /* Mobil/Kapalıyken: AŞAĞI OK (Genişlet) */
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="glow"></div>
+
+    <aside class="sidebar">
+        <button class="menu-btn" onclick="toggleMenu()"></button>
+        <h2>Filtre</h2>
+        <div class="credit">
+            Bu proje Umut Kafatutar'a aittir.
+            <div style="margin-top: 10px;">Galata Mesleki ve Teknik Anadolu Lisesi okulu içindir</div>
+        </div>
+
+        <!-- YENİ ONAY KUTUSU -->
+        <div class="filter-item" style="flex-direction: row; align-items: center; justify-content: space-between; background: rgba(0, 123, 255, 0.1); padding: 8px 10px; border: 1px solid rgba(0, 123, 255, 0.2); border-radius: 10px; margin-bottom: 10px;">
+            <label for="detayliListe" style="margin: 0; color: #fff; cursor: pointer;">Diğer Tarihler</label>
+            <input type="checkbox" id="detayliListe" onchange="verileriYukle()" style="width: 18px; height: 18px; margin: 0; cursor: pointer; accent-color: var(--glow);">
+        </div>
+
+        <div class="filter-item">
+            <label>Metin Arama</label>
+            <input type="text" id="ara" placeholder="Ders veya şube yaz..." oninput="filtrele()">
+        </div>
+
+        <div class="filter-item">
+            <label>Tarih</label>
+            <select id="tarih" onchange="filtrele()">
+                <option value="">Tümü</option>
+            </select>
+        </div>
+
+        <div class="filter-item">
+            <label>Sınıf</label>
+            <select id="sinif" onchange="filtrele()">
+                <option value="">Tümü</option>
+            </select>
+        </div>
+
+        <!-- ID EKLEDİK: filter-sube -->
+        <div class="filter-item" id="filter-sube">
+            <label>Şube/Grup</label>
+            <select id="sube" onchange="filtrele()">
+                <option value="">Tümü</option>
+            </select>
+        </div>
+
+        <!-- ID EKLEDİK: filter-bolum -->
+        <div class="filter-item" id="filter-bolum">
+            <label>Bölüm</label>
+            <select id="bolum" onchange="filtrele()">
+                <option value="">Tümü</option>
+            </select>
+        </div>
+
+        <div class="filter-item">
+            <label>Ders</label>
+            <select id="ders" onchange="filtrele()">
+                <option value="">Tümü</option>
+            </select>
+        </div>
+
+        <div style="margin-top: auto; padding-left: 10px;">
+            <div style="font-size: 0.6rem; color: #003366; letter-spacing: 1px;">SİSTEM AKTİF v2.0</div>
+        </div>
+    </aside>
+
+    <main class="content">
+        <div id="sonuclar" class="grid">
+            <div class="loader"></div>
+            </div>
+    </main>
+
+    <div id="exam-counter"></div>
+
+    <script>
+        // Smooth Glow
+        const glow = document.getElementById('glow');
+        document.addEventListener('mousemove', (e) => {
+            glow.style.left = e.clientX + 'px';
+            glow.style.top = e.clientY + 'px';
+        });
+
+        let database = [];
+        
+        // Sayfa açıldığında verileri yükle
+        verileriYukle();
+
+        function verileriYukle() {
+            const checkbox = document.getElementById('detayliListe');
+            const isDetailed = checkbox.checked;
+            
+            // Checkbox durumuna göre URL belirle
+            // İşaretli değilse (varsayılan) /api/data (Instagram verisi)
+            // İşaretliyse /api/data?kaynak=detayli (Detaylı liste)
+            const url = isDetailed ? '/api/data?kaynak=detayli' : '/api/data';
+
+            // Filtreleri Gizle/Göster
+            const subeFilter = document.getElementById('filter-sube');
+            const bolumFilter = document.getElementById('filter-bolum');
+            
+            if (isDetailed) {
+                // Detaylı listede şube ve bölüm filtrelerini göster
+                subeFilter.style.display = 'flex';
+                bolumFilter.style.display = 'flex';
+            } else {
+                // Özet listede (Instagram) bu filtreleri gizle
+                subeFilter.style.display = 'none';
+                bolumFilter.style.display = 'none';
+            }
+
+            // Yükleniyor animasyonu
+            document.getElementById('sonuclar').innerHTML = '<div class="loader"></div>';
+
+            fetch(url)
+                .then(r => r.json())
+                .then(data => {
+                    database = data || []; 
+                    populateFilters(database);
+                    filtrele(); // Veriyi ekrana bas
+                })
+                .catch(err => {
+                    console.warn("API erişilemedi, veriler yüklenemedi.", err);
+                    database = [];
+                    populateFilters([]); 
+                    goster([]);
+                });
+        }
+
+        function goster(liste) {
+            const container = document.getElementById('sonuclar');
+            const counter = document.getElementById('exam-counter');
+            if (counter) {
+                counter.textContent = `${liste.length} / ${database.length} sınav gösteriliyor`;
+            }
+
+            if (liste.length === 0) {
+                container.innerHTML = '<div style="color: #888; grid-column: 1/-1; text-align: center; padding: 20px;">Kayıt bulunamadı.</div>';
+                return;
+            }
+            container.innerHTML = liste.map(s => `
+                <div class="card">
+                    <div class="top">
+                        <div class="ders">${s['DERS'] || s['DERS ADI']}</div>
+                        <div class="saat">${s['SAAT']}</div>
+                    </div>
+                    <div class="alt">
+                        <div>Sınıf: ${s['SINIF']}</div>
+                        <div>Tarih: ${s['TARİH']}</div>
+                        <div style="font-size: 0.8em; color: #aaa; margin-top: 5px;">Öğrt: ${s['ÖĞRETMEN'] || '-'}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function populateFilters(data) {
+            const sinifSelect = document.getElementById('sinif');
+            const subeSelect = document.getElementById('sube');
+            const bolumSelect = document.getElementById('bolum');
+            const dersSelect = document.getElementById('ders');
+            const tarihSelect = document.getElementById('tarih');
+
+            const uniqueSiniflar = new Set();
+            const uniqueSubeler = new Set();
+            const uniqueBolumler = new Set();
+            const uniqueDersler = new Set();
+            const uniqueTarihler = new Set();
+
+            data.forEach(item => {
+                const dersVerisi = String(item['DERS'] || item['DERS ADI'] || '').trim();
+                if (dersVerisi) uniqueDersler.add(dersVerisi);
+
+                const tarihVerisi = String(item['TARİH'] || '').trim();
+                if (tarihVerisi) {
+                    uniqueTarihler.add(tarihVerisi.split(' ')[0]); // Sadece DD.MM.YYYY kısmını al
+                }
+
+                const sinifVerisi = String(item['SINIF'] || '');
+                if (!sinifVerisi) return;
+
+                const parts = sinifVerisi.split('/');
+                const grade = parts[0].trim();
+                if (grade) uniqueSiniflar.add(grade);
+ 
+                // Şube/Grup için (9/A, 9/B vb.) - Boşluktan önceki kısmı al
+                const subeKodu = sinifVerisi.split(' ')[0].trim();
+                if (subeKodu.includes('/')) {
+                    uniqueSubeler.add(subeKodu);
+                }
+
+                if (parts.length > 1) {
+                    const branches = parts[1].trim().split(/\s+/);
+                    branches.forEach(b => {
+                        let val = b.replace(/[()]/g, '').trim().toLocaleUpperCase('tr');
+                        
+                        // Anomalileri düzelt (S1 -> ELK, Bİ -> BİL)
+                        if (val === 'S1') val = 'ELK';
+                        if (val === 'Bİ') val = 'BİL';
+
+                        // Tek harfleri (A, B, S, L) ve sayıları ele, sadece bölüm kodlarını al
+                        if (val.length > 1 && isNaN(val) && val !== 'S' && val !== 'L') {
+                            uniqueBolumler.add(val);
+                        }
+                    });
+                }
+            });
+
+            // Mevcut seçenekleri temizle ("Tümü" hariç)
+            sinifSelect.innerHTML = '<option value="">Tümü</option>';
+            subeSelect.innerHTML = '<option value="">Tümü</option>';
+            bolumSelect.innerHTML = '<option value="">Tümü</option>';
+            dersSelect.innerHTML = '<option value="">Tümü</option>';
+            tarihSelect.innerHTML = '<option value="">Tümü</option>';
+
+            // Tarihleri doldur
+            Array.from(uniqueTarihler).sort((a, b) => {
+                // Tarihleri DD.MM.YYYY formatına göre sırala
+                const dateA = a.split('.').reverse().join('-');
+                const dateB = b.split('.').reverse().join('-');
+                return new Date(dateA) - new Date(dateB);
+            }).forEach(tarih => {
+                const option = document.createElement('option');
+                option.value = tarih;
+                option.textContent = tarih;
+                tarihSelect.appendChild(option);
+            });
+
+            // Sınıfları doldur
+            Array.from(uniqueSiniflar).sort((a, b) => a - b).forEach(sinif => {
+                const option = document.createElement('option');
+                option.value = sinif;
+                option.textContent = `${sinif}. Sınıf`;
+                sinifSelect.appendChild(option);
+            });
+
+            // Şube/Grup doldur (9/A, 9/B...)
+            Array.from(uniqueSubeler).sort().forEach(sube => {
+                const option = document.createElement('option');
+                option.value = sube;
+                option.textContent = sube;
+                subeSelect.appendChild(option);
+            });
+
+            // Bölümleri doldur
+            const bolumIsimleri = { 
+                'ELK': 'Elektrik-Elektronik Teknolojileri Alanı', 
+                'BİL': 'Bilişim Teknolojileri Alanı',
+                'MAK': 'Makine Tasarımı ve Teknolojisi Alanı'
+            };
+
+            Array.from(uniqueBolumler).sort().forEach(bolum => {
+                const option = document.createElement('option');
+                option.value = bolum;
+                option.textContent = bolumIsimleri[bolum] || bolum;
+                bolumSelect.appendChild(option);
+            });
+
+            // Dersleri doldur
+            Array.from(uniqueDersler).sort().forEach(ders => {
+                const option = document.createElement('option');
+                option.value = ders;
+                option.textContent = ders;
+                dersSelect.appendChild(option);
+            });
+        }
+
+        function filtrele() {
+            const metin = document.getElementById('ara').value.toLocaleLowerCase('tr');
+            const tarih = document.getElementById('tarih').value;
+            const sinif = document.getElementById('sinif').value;
+            const sube = document.getElementById('sube').value;
+            const bolum = document.getElementById('bolum').value;
+            const ders = document.getElementById('ders').value;
+
+            const sonuc = database.filter(x => {
+                const dersAdi = String(x['DERS'] || x['DERS ADI'] || "").toLocaleLowerCase('tr');
+                const sinifVerisi = String(x['SINIF'] || "");
+                const tarihVerisi = String(x['TARİH'] || "");
+                
+                const parts = sinifVerisi.split('/');
+                const itemGrade = parts[0].trim();
+                const itemSube = sinifVerisi.split(' ')[0].trim(); // 9/A, 9/B
+                
+                let itemTags = [];
+                if (parts.length > 1) {
+                     const rawTags = parts[1].trim().toLocaleUpperCase('tr').split(/\s+/);
+                     itemTags = rawTags.map(t => {
+                         let val = t.replace(/[()]/g, '').trim();
+                         if (val === 'S1') return 'ELK';
+                         if (val === 'Bİ') return 'BİL';
+                         return val;
+                     });
+                }
+
+                const metinMatch = dersAdi.includes(metin) || sinifVerisi.toLocaleLowerCase('tr').includes(metin);
+                const tarihMatch = tarih === "" || tarihVerisi.startsWith(tarih);
+                const sinifMatch = sinif === "" || itemGrade === sinif;
+                const subeMatch = sube === "" || itemSube === sube;
+                const bolumMatch = bolum === "" || itemTags.includes(bolum);
+                const dersMatch = ders === "" || String(x['DERS'] || x['DERS ADI'] || "") === ders;
+
+                return metinMatch && tarihMatch && sinifMatch && subeMatch && bolumMatch && dersMatch;
+            });
+            goster(sonuc);
+        }
+
+        function toggleMenu() {
+            document.querySelector('.sidebar').classList.toggle('kapali');
+        }
+    </script>
+</body>
+</html>
